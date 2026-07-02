@@ -9,26 +9,27 @@ function [samp_val,samp_val_mat,samp_1_correct,samp_2_correct,samp_1_dv,samp_2_d
 %   A new method to compute classification error
 %   https://jov.arvojournals.org/article.aspx?articleid=2750251
 
-% parse inputs
-parser=inputParser;
-parser.KeepUnmatched=true;
-addRequired(parser,'samp_1',@isnumeric);
-addRequired(parser,'samp_2',@isnumeric);
-addRequired(parser,'dom', @(x) isstruct(x) || isa(x,'function_handle'));
-addParameter(parser,'dom_type','quad');
-addParameter(parser,'d_scale_type','squeeze_dv', @(s) strcmpi(s,'squeeze_dv') || strcmpi(s,'squeeze_dist'));
-addParameter(parser,'d_scale',1);
-addParameter(parser,'acc_sharpness',inf,@isscalar); % sharpness of sigmoidal accuracy function. Inf means exact step function.
-addParameter(parser,'vals',eye(2), @(x) isnumeric(x) && ismatrix(x));
-addParameter(parser,'samp_balance',false,@islogical);
-
-parse(parser,samp_1,samp_2,dom,varargin{:});
-dom_type=parser.Results.dom_type;
-acc_sharpness=parser.Results.acc_sharpness;
-vals=parser.Results.vals;
-d_scale_type=parser.Results.d_scale_type;
-d_scale=parser.Results.d_scale;
-samp_balance=parser.Results.samp_balance;
+% parse inputs (manual name-value parse instead of inputParser: this is
+% called once per objective evaluation during boundary optimization, where
+% inputParser overhead dominates. Unknown name-value pairs are ignored,
+% matching the previous parser.KeepUnmatched=true behavior.)
+dom_type='quad';
+d_scale_type='squeeze_dist'; % match classify_normals default; squeeze_dv (the only
+                             % transform samp_value applies) acts only when d_scale~=1
+d_scale=1;
+acc_sharpness=inf; % sharpness of sigmoidal accuracy function. Inf means exact step function.
+vals=eye(2);
+samp_balance=false;
+for i=1:2:numel(varargin)-1
+    switch lower(varargin{i})
+        case 'dom_type',      dom_type=varargin{i+1};
+        case 'd_scale_type',  d_scale_type=varargin{i+1};
+        case 'd_scale',       d_scale=varargin{i+1};
+        case 'acc_sharpness', acc_sharpness=varargin{i+1};
+        case 'vals',          vals=varargin{i+1};
+        case 'samp_balance',  samp_balance=varargin{i+1};
+    end
+end
 
 if strcmpi(dom_type,'ray_trace')
     [~,~,samp_1_correct]=dom(samp_1',[]);

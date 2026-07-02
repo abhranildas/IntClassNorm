@@ -8,11 +8,13 @@ addParameter(parser,'vals',eye(2), @(x) isnumeric(x) && ismatrix(x));
 addParameter(parser,'samp_opt','svm');
 addParameter(parser,'samp_opt_plot','step', @(x) strcmpi(x,'step') || strcmpi(x,'smooth') || x==false);
 addParameter(parser,'plots',false, @islogical);
+addParameter(parser,'prior_1',0.5, @(x) isnumeric(x) && isscalar(x) && (x>0) && (x<1));
 
 parse(parser,samp_1,samp_2,norm_bd,varargin{:});
 samp_opt=parser.Results.samp_opt;
 vals=parser.Results.vals;
 plots=parser.Results.plots;
+prior_1=parser.Results.prior_1;
 
 dim=size(samp_1,2);
 
@@ -121,8 +123,8 @@ if samp_opt
         if plots
             colors=colororder;
             hold on
-            plot_sample(samp_1,.5,colors(1,:)); % HERE THE PRIORS ARE SET BY HAND TO 0.5, CHANGE THIS TO ACCEPT THE ACTUAL PRIOR
-            plot_sample(samp_2,.5,colors(2,:));
+            plot_sample(samp_1,prior_1,colors(1,:));
+            plot_sample(samp_2,1-prior_1,colors(2,:));
             axis image; % axis([-10 10 -10 10])
 
             bd_handle=plot_boundary(norm_bd,dim,'plot_type','line','line_color',[0 1 0]); % placeholder for sample boundary

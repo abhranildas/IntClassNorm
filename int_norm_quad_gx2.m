@@ -37,5 +37,13 @@ if ~nnz(quad.q2) % if q2 is zero, linear discriminant
 else
     % get generalized chi-squared parameters
     [w,k,lambda,s,m]=norm_quad_to_gx2_params(mu,v,quad);
-    p=gx2cdf(0,w,k,lambda,s,m,varargin{:},'method','auto');
+    % p(q(x)>0) is the requested side of the gx2 cdf at 0. Pass the resolved
+    % side explicitly, since it is not always present in varargin (e.g. when
+    % the caller relies on the default). Strip any leading positional side
+    % first to avoid passing it twice.
+    vg=varargin;
+    if ~isempty(vg) && (ischar(vg{1})||isstring(vg{1})) && any(strcmpi(vg{1},{'lower','upper'}))
+        vg(1)=[];
+    end
+    p=gx2cdf(0,w,k,lambda,s,m,side,vg{:},'method','auto');
 end

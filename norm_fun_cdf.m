@@ -59,15 +59,11 @@ addParameter(parser,'RelTol',1e-2);
 parse(parser,x,mu,v,fun,varargin{:});
 
 if isa(fun,'function_handle')
-    % if strcmpi(side,'lower')
     if ismember('side',parser.UsingDefaults)
         p=arrayfun(@(fun_level) integrate_normal(mu,v,fun,'lower',varargin{:},'dom_type','fun','fun_level',fun_level,'plotmode',false), x);
     else
         p=arrayfun(@(fun_level) integrate_normal(mu,v,fun,varargin{:},'dom_type','fun','fun_level',fun_level,'plotmode',false), x);
-    end        
-    % elseif strcmpi(side,'upper')
-        % p=arrayfun(@(fun_level) integrate_normal(mu,v,fun,varargin{:},'dom_type','fun','fun_level',fun_level,'dom_side','above','plotmode',false), x);
-    % end
+    end
 elseif isstruct(fun)
     [w,k,lambda,s,m]=norm_quad_to_gx2_params(mu,v,fun);
     p=gx2cdf(x,w,k,lambda,s,m,varargin{:});

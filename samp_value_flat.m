@@ -10,13 +10,9 @@ function v=samp_value_flat(x,samp_1,samp_2,varargin)
 %   A new method to compute classification error
 %   https://jov.arvojournals.org/article.aspx?articleid=2750251
 
-parser=inputParser;
-parser.KeepUnmatched=true;
-addRequired(parser,'x',@isnumeric);
-addRequired(parser,'samp_1',@isnumeric);
-addRequired(parser,'samp_2',@isnumeric);
-
-parse(parser,x,samp_1,samp_2,varargin{:});
+% Note: no inputParser here. This is the objective evaluated thousands of
+% times during boundary optimization, so we avoid the per-call parser
+% overhead and pass varargin straight through to samp_value.
 
 dim=size(samp_1,2);
 q2=zeros(dim);

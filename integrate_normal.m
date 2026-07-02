@@ -83,7 +83,7 @@ function [p,p_err,bd_pts]=integrate_normal(mu,v,dom,varargin)
     parser.KeepUnmatched=true;
     addRequired(parser,'mu',@isnumeric);
     addRequired(parser,'v',@isnumeric);
-    addRequired(parser,'dom',@(x) isstruct(x) || isa(x,'function_handle') || ismatrix(x));
+    addRequired(parser,'dom',@(x) isstruct(x) || isa(x,'function_handle') || isnumeric(x));
     addOptional(parser,'side','upper',@(x) strcmpi(x,'lower') || strcmpi(x,'upper') );
     addParameter(parser,'dom_type','quad');
     addParameter(parser,'method','ray');
@@ -94,6 +94,9 @@ function [p,p_err,bd_pts]=integrate_normal(mu,v,dom,varargin)
     addParameter(parser,'AbsTol',1e-10);
     addParameter(parser,'RelTol',1e-2);
     addParameter(parser,'plotmode','norm_prob');
+    % draw the analytic domain boundary line when plotting. classify_normals
+    % draws its own boundaries, so it passes false to suppress this one.
+    addParameter(parser,'plot_bd_line',true);
     colors=colororder;
     addParameter(parser,'plot_color',[colors(1,:);colors(1,:)]);
 
@@ -104,6 +107,7 @@ function [p,p_err,bd_pts]=integrate_normal(mu,v,dom,varargin)
     plotmode=parser.Results.plotmode;
     plot_color=parser.Results.plot_color;
     bd_pts_flag=parser.Results.bd_pts;
+    plot_bd_line=parser.Results.plot_bd_line;
 
 
     dim=length(mu);
@@ -148,13 +152,8 @@ function [p,p_err,bd_pts]=integrate_normal(mu,v,dom,varargin)
             end            
             if strcmpi(method,'ray') && bd_pts_flag
                 plot_boundary(bd_pts,dim,'dom_type','bd_pts');
-            else
-                % if classify_normals called this function, don't draw
-                % boundary
-                callStack = dbstack;
-                if ~(numel(callStack)>1 && strcmpi(callStack(2).name,'classify_normals'))
-                    plot_boundary(dom,dim,varargin{:},'mu',mu,'v',v,'plot_type','line');
-                end
+            elseif plot_bd_line
+                plot_boundary(dom,dim,varargin{:},'mu',mu,'v',v,'plot_type','line');
             end
         elseif strcmpi(plotmode,'fun_prob')
             ylim auto

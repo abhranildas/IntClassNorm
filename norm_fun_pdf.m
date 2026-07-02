@@ -56,12 +56,22 @@ function f=norm_fun_pdf(x,mu,v,fun,varargin)
     addRequired(parser,'v',@isnumeric);
     addRequired(parser,'fun',@(x) isstruct(x)|| isa(x,'function_handle'));
     addParameter(parser,'pdf_method','ray');
+    addParameter(parser,'fun_grad',[]);
     addParameter(parser,'dx',1e-3,@(x) isreal(x) && isscalar(x) && (x>=0));
 
     parse(parser,x,mu,v,fun,varargin{:});
     pdf_method=parser.Results.pdf_method;
+    has_grad=~any(strcmpi(parser.UsingDefaults,'fun_grad'));
 
     if isa(fun,'function_handle')
+        % the 'ray' pdf method needs an analytic gradient (fun_grad). If none
+        % is supplied, fall back to numerically differencing the cdf ('diff').
+        if strcmpi(pdf_method,'ray') && ~has_grad
+            if ~any(strcmpi(parser.UsingDefaults,'pdf_method'))
+                warning("norm_fun_pdf: the 'ray' pdf method needs 'fun_grad'; falling back to numeric differencing ('diff').")
+            end
+            pdf_method='diff';
+        end
         if strcmpi(pdf_method,'ray')
             f=arrayfun(@(x_each) int_norm_ray(mu,v,fun,'dom_type','fun','output','prob_dens','fun_level',x_each,varargin{:}), x);
         elseif strcmpi(pdf_method,'diff')

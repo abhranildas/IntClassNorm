@@ -26,11 +26,7 @@ function bd_handle=plot_boundary(dom,dim,varargin)
     if isrow(fill_colors)
         fill_colors=[1 1 1; .1*fill_colors+.9*[1 1 1]];
     end
-    
-%     if dim>3
-%         plot_boundary(@(x) x-fun_level,1,'dom_type','fun','plot_type','line');
-%         plot_boundary(@(x) x-fun_level,1,'dom_type','fun','plot_type','fill','fill_colors',fill_colors);
-%     else
+
         if strcmpi(dom_type,'fun') || strcmpi(dom_type,'quad')
             
             if strcmpi(dom_type,'fun')
@@ -90,4 +86,3 @@ function bd_handle=plot_boundary(dom,dim,varargin)
             end
             
         end
-%     end

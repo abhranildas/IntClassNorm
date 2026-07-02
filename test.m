@@ -384,3 +384,210 @@ samp_2=mvnrnd(mu_2,v_2,n_samp);
 results=classify_normals(samp_1,samp_2,'input_type','samp','samp_opt',100)
 
 results_sub=classify_normals(samp_1,samp_2,'input_type','samp','dom',linear_bd,'samp_opt',100)
+
+%% demo_covariance_test.m
+% A simple script to demonstrate the compareCovariances function
+
+% 1. Define parameters for two bivariate distributions
+mu1 = [0, 0];
+% Covariance 1: Strong positive correlation
+Sigma1 = [2.0, 1.5; 
+          1.5, 2.0];  
+
+mu2 = [0, 0]; % Different mean (handled by the function's mean subtraction)
+% Covariance 2: Negative correlation
+Sigma2 = [2.0, 1.55; 
+         1.55,  2.0]; 
+
+% Number of observations
+N1 = 1e4;
+N2 = 1e3;
+
+% 2. Draw samples from the distributions
+X1 = mvnrnd(mu1, Sigma1, N1);
+X2 = mvnrnd(mu2, Sigma2, N2);
+
+% 3. Plot the raw data to visually inspect the different covariances
+figure;
+scatter(X1(:,1), X1(:,2), 30, 'b', 'filled', 'MarkerFaceAlpha', 0.6);
+hold on;
+scatter(X2(:,1), X2(:,2), 30, 'r', 'filled', 'MarkerFaceAlpha', 0.6);
+title('Scatter Plot of Two Bivariate Samples');
+xlabel('Variable 1');
+ylabel('Variable 2');
+
+% 4. Call the function to test if covariances are statistically different
+p = compare_covariances(X1, X2, 'plotmode', true)
+
+p_box = boxMTest(X1, X2)
+
+%% A script to evaluate p-value calibration and ROC performance
+clear; clc; close all;
+
+% Simulation parameters
+num_same = 500; % Number of iterations for the Null hypothesis
+num_diff = 500; % Number of iterations for the Alternative hypothesis
+N1 = 350;
+N2 = 500;
+nu = 5; % Degrees of freedom for t-distribution (heavy tails)
+
+% Array of nominal p-value criteria to test (0 to 1)
+% Increased to 1000 points to make the ROC curves smoother
+alpha_criteria = linspace(0, 1, 1000); 
+
+% =========================================================================
+% SIMULATIONS (Null & Alternative Hypotheses)
+% =========================================================================
+% Initialize arrays to store the raw p-values
+p_perm_same = zeros(num_same, 4); p_box_same = zeros(num_same, 4);
+p_perm_diff = zeros(num_diff, 4); p_box_diff = zeros(num_diff, 4);
+
+dist_names = {'Normal', 'T-Dist (Heavy Tails)', 'Log-Normal (Skewed)', 'Bimodal'};
+fprintf('Running simulations (%d iterations per scenario)...\n', num_same + num_diff);
+
+for d = 1:4
+    fprintf('Processing %s data...\n', dist_names{d});
+    
+    % --- SAME COVARIANCES (Null is True) ---
+    for i = 1:num_same
+        A = randn(2,2);
+        if d == 3, A = A * 0.5; end % Scale down for log-normal
+        Sigma = A * A' + eye(2)*0.5; 
+        
+        [X1, X2] = generate_data(Sigma, Sigma, N1, N2, d, nu);
+        
+        [p_perm_same(i, d), ~] = compare_covariances(X1, X2, 'plotmode', false);
+        [p_box_same(i, d), ~, ~] = boxMTest(X1, X2);
+    end
+    
+    % --- DIFFERENT COVARIANCES (Null is False) ---
+    for i = 1:num_diff
+        A = randn(2,2);
+        if d == 3, A = A * 0.5; end
+        Sigma1 = A * A' + eye(2)*0.5;
+        
+        perturbation_factor = 2 * (i / num_diff); 
+        B = randn(2,2);
+        if d == 3, B = B * 0.5; end
+        Sigma2 = Sigma1 + perturbation_factor * (B * B');
+        
+        [X1, X2] = generate_data(Sigma1, Sigma2, N1, N2, d, nu);
+        
+        [p_perm_diff(i, d), ~] = compare_covariances(X1, X2, 'plotmode', false);
+        [p_box_diff(i, d), ~, ~] = boxMTest(X1, X2);
+    end
+end
+
+% =========================================================================
+% CALCULATE RATES FOR PLOTTING
+% =========================================================================
+% Initialize arrays to store the actual FPR and TPR for each nominal criterion
+fpr_perm = zeros(length(alpha_criteria), 4); tpr_perm = zeros(length(alpha_criteria), 4);
+fpr_box  = zeros(length(alpha_criteria), 4); tpr_box  = zeros(length(alpha_criteria), 4);
+
+for d = 1:4
+    for a_idx = 1:length(alpha_criteria)
+        current_alpha = alpha_criteria(a_idx);
+        
+        % False Positive Rate (Fraction of 'Same' cases predicted as 'Different')
+        fpr_perm(a_idx, d) = sum(p_perm_same(:, d) <= current_alpha) / num_same;
+        fpr_box(a_idx, d)  = sum(p_box_same(:, d) <= current_alpha) / num_same;
+        
+        % True Positive Rate (Fraction of 'Different' cases predicted as 'Different')
+        tpr_perm(a_idx, d) = sum(p_perm_diff(:, d) <= current_alpha) / num_diff;
+        tpr_box(a_idx, d)  = sum(p_box_diff(:, d) <= current_alpha) / num_diff;
+    end
+end
+
+% =========================================================================
+% PLOTTING: 2x4 GRID
+% =========================================================================
+figure
+
+for d = 1:4
+    % -----------------------------------------------------------
+    % ROW 1: Calibration Curves (Nominal vs Actual FPR)
+    % -----------------------------------------------------------
+    subplot(2, 4, d);
+    hold on; grid on;
+    
+    % Ideal Calibration Line (y = x)
+    plot([0 1], [0 1], 'k--', 'LineWidth', 1.5, 'DisplayName', 'Ideal (y = x)');
+    
+    % Actual FPRs using plot with dots
+    plot(alpha_criteria, fpr_perm(:, d), 'b.', 'MarkerSize', 8, 'DisplayName', 'Permutation LLR');
+    plot(alpha_criteria, fpr_box(:, d), 'r.', 'MarkerSize', 8, 'DisplayName', 'Box''s M-Test');
+    
+    % Formatting
+    title(dist_names{d});
+    xlabel('Nominal p-value criterion (\alpha)');
+    ylabel('Actual False Positive Rate');
+    xlim([0 1]); ylim([0 1]);
+    axis square;
+    if d == 1, legend('Location', 'NW'); end
+    hold off;
+    
+    % -----------------------------------------------------------
+    % ROW 2: ROC Curves
+    % -----------------------------------------------------------
+    subplot(2, 4, d + 4);
+    hold on; grid on;
+    
+    % Reference random-guess line
+    plot([0 1], [0 1], 'k--', 'LineWidth', 1.5);
+    
+    % ROC Curves (FPR vs TPR) using solid lines
+    plot(fpr_perm(:, d), tpr_perm(:, d), '.b');
+    plot(fpr_box(:, d), tpr_box(:, d), '.r');
+    
+    % Calculate exact AUCs to put in the title
+    auc_p = compute_auc(p_perm_same(:, d), p_perm_diff(:, d));
+    auc_b = compute_auc(p_box_same(:, d), p_box_diff(:, d));
+    
+    % Formatting
+    title(sprintf('AUC: Perm=%.3f, Box=%.3f', auc_p, auc_b));
+    xlabel('False Positive Rate (FPR)');
+    ylabel('True Positive Rate (TPR)');
+    xlim([0 1]); ylim([0 1]);
+    axis square;
+    hold off;
+end
+
+% =========================================================================
+% HELPER FUNCTIONS
+% =========================================================================
+function [X1, X2] = generate_data(Sigma1, Sigma2, N1, N2, type, nu)
+    switch type
+        case 1 % Normal
+            X1 = mvnrnd([0 0], Sigma1, N1);
+            X2 = mvnrnd([0 0], Sigma2, N2);
+        case 2 % T-Distribution
+            [C1, sig1] = corrcov(Sigma1);
+            [C2, sig2] = corrcov(Sigma2);
+            X1 = mvtrnd(C1, nu, N1) .* sig1';
+            X2 = mvtrnd(C2, nu, N2) .* sig2';
+        case 3 % Log-Normal
+            X1 = exp(mvnrnd([0 0], Sigma1, N1));
+            X2 = exp(mvnrnd([0 0], Sigma2, N2));
+        case 4 % Bimodal
+            mu_shift = [3, 3];
+            shift1 = (randi([0 1], N1, 1) * 2 - 1) .* mu_shift;
+            shift2 = (randi([0 1], N2, 1) * 2 - 1) .* mu_shift;
+            X1 = mvnrnd([0 0], Sigma1, N1) + shift1;
+            X2 = mvnrnd([0 0], Sigma2, N2) + shift2;
+    end
+end
+
+function auc = compute_auc(p_same, p_diff)
+    % Exact AUC via Wilcoxon rank-sum trick
+    scores_neg = 1 - p_same; 
+    scores_pos = 1 - p_diff; 
+    
+    n0 = length(scores_neg);
+    n1 = length(scores_pos);
+    
+    ranks = tiedrank([scores_neg; scores_pos]);
+    sum_ranks_pos = sum(ranks(n0 + 1 : end));
+    auc = (sum_ranks_pos - n1 * (n1 + 1) / 2) / (n0 * n1);
+end
+
