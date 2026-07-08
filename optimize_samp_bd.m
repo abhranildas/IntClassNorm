@@ -9,12 +9,15 @@ addParameter(parser,'samp_opt','svm');
 addParameter(parser,'samp_opt_plot','step', @(x) strcmpi(x,'step') || strcmpi(x,'smooth') || x==false);
 addParameter(parser,'plots',false, @islogical);
 addParameter(parser,'prior_1',0.5, @(x) isnumeric(x) && isscalar(x) && (x>0) && (x<1));
+addParameter(parser,'samp_balance',false,@islogical);
 
 parse(parser,samp_1,samp_2,norm_bd,varargin{:});
 samp_opt=parser.Results.samp_opt;
 vals=parser.Results.vals;
 plots=parser.Results.plots;
 prior_1=parser.Results.prior_1;
+samp_balance=parser.Results.samp_balance;
+vals_given=~ismember('vals',parser.UsingDefaults); % true if the user explicitly passed a custom vals matrix
 
 dim=size(samp_1,2);
 
@@ -46,18 +49,31 @@ if samp_opt
         end
         samp_val_best=-samp_val_best;
     elseif strcmpi(samp_opt,'svm')
-        % Quadratic SVM with class-balanced accuracy and value-based costs
+        % Quadratic SVM. Training weights honor samp_balance (overall vs
+        % class-balanced) and value-based costs come from vals; the returned
+        % boundary is scored with samp_value_flat so samp_val_best matches the
+        % units and configuration of samp_val_current.
 
         % Build training set
         X = [samp_1; samp_2];                        % rows = observations
         Y = [ones(size(samp_1,1),1);                 % +1 for samp_1
             -ones(size(samp_2,1),1)];               % -1 for samp_2
 
-        % Class-balanced sample weights: each class gets total weight 0.5
+        % Sample weights honor the user's samp_balance choice, matching the
+        % objective that the other optimizer branches (and samp_value) use:
+        %   samp_balance=true  -> class-balanced: each class gets total weight 0.5
+        %   samp_balance=false -> overall: every point weighted equally
+        % Note on Weights x Cost: fitcsvm folds the Cost matrix into effective
+        % observation weights, so class priors enter only through W here; Cost
+        % (below) carries only the value asymmetry from vals, not balancing.
         N1 = size(samp_1,1);
         N2 = size(samp_2,1);
-        W  = [0.5/N1 * ones(N1,1);
-            0.5/N2 * ones(N2,1)];
+        if samp_balance
+            W = [0.5/N1 * ones(N1,1);
+                 0.5/N2 * ones(N2,1)];
+        else
+            W = ones(N1+N2,1) / (N1+N2);
+        end
 
         % vals(i,j): value of assigning a point from sample i as j (i,j in {1,2})
         % Convert to misclassification costs (assuming vals(i,i) >= vals(i,≠i))
@@ -113,11 +129,14 @@ if samp_opt
         samp_bd_current=[samp_bd_svm.q2(triu(true(size(samp_bd_svm.q2)))); samp_bd_svm.q1(:); samp_bd_svm.q0];
 
 
-        % Compute class-balanced accuracy on training data
-        Yhat     = predict(svm_model, X);
-        hit_rate = mean(Yhat(Y ==  1) ==  1);   % TPR
-        corr_rej = mean(Yhat(Y == -1) == -1);   % TNR
-        samp_val_best = 0.5 * (hit_rate + corr_rej);
+        % Evaluate the trained SVM boundary with the same metric used for the
+        % normal boundary (samp_val_current) and by the other optimizer
+        % branches, so both reported values share units and honor the user's
+        % samp_balance and vals. Note fitcsvm optimizes a (weighted, cost-
+        % adjusted) hinge-loss surrogate, not this exact 0-1 metric, so
+        % samp_val_best is an honest evaluation of the returned boundary
+        % rather than a quantity the SVM directly maximized.
+        samp_val_best = samp_value_flat(samp_bd_current, samp_1, samp_2, varargin{:});
 
     elseif strcmpi(samp_opt,'smooth') % if smoothened accuracy, use fminunc
         if plots
@@ -173,5 +192,32 @@ if samp_opt
             end
         end
     end
-    fprintf('Found boundary to optimize sample classification accuracy/value: \n %g (with normal boundary) \n %g (with sample boundary)\n',[samp_val_current, samp_val_best])
+    % When no custom vals is supplied, samp_value_flat (with samp_balance=false)
+    % returns a raw correct-classification count rather than a fraction;
+    % convert to accuracy here so the printed metric is always a rate. When
+    % samp_balance=true the metric returned is already a fraction (mean of
+    % per-class accuracies), so no rescaling is needed in that case.
+    N=size(samp_1,1)+size(samp_2,1);
+    if ~vals_given && ~samp_balance
+        samp_val_current=samp_val_current/N;
+        samp_val_best=samp_val_best/N;
+    end
+
+    % Label what is actually being optimized/reported: plain accuracy,
+    % class-balanced accuracy, or expected value (when a custom vals is given).
+    if vals_given
+        if samp_balance
+            metric_label='class-balanced expected value';
+        else
+            metric_label='expected value';
+        end
+    else
+        if samp_balance
+            metric_label='class-balanced accuracy';
+        else
+            metric_label='accuracy';
+        end
+    end
+
+    fprintf('Found boundary to optimize sample classification %s: \n %g (with normal boundary) \n %g (with sample boundary)\n',metric_label,samp_val_current,samp_val_best)
 end
