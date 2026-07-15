@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.toolbox" plugin-version="1.0">
-  <configuration build-checksum="3162796074" file="F:\OneDrive - The University of Texas at Austin\Geisler Lab\IntClassNorm\Integrate and Classify Normal Distributions.prj" location="F:\OneDrive - The University of Texas at Austin\Geisler Lab\IntClassNorm" name="Integrate and Classify Normal Distributions" target="target.toolbox" target-name="Package Toolbox">
+  <configuration build-checksum="3162796074" file="C:\Users\Abhranil\OneDrive - The University of Texas at Austin\Geisler Lab\IntClassNorm\Integrate and Classify Normal Distributions.prj" location="C:\Users\Abhranil\OneDrive - The University of Texas at Austin\Geisler Lab\IntClassNorm" name="Integrate and Classify Normal Distributions" target="target.toolbox" target-name="Package Toolbox">
     <param.appname>Integrate and Classify Normal Distributions</param.appname>
     <param.authnamewatermark>Abhranil Das</param.authnamewatermark>
     <param.email>abhranil.das@utexas.edu</param.email>
@@ -9,7 +9,7 @@
 
 Begin with the Getting Started live script with interactive examples.</param.description>
     <param.screenshot>${PROJECT_ROOT}\icon.png</param.screenshot>
-    <param.version>3.3.0</param.version>
+    <param.version>3.4.0</param.version>
     <param.output>${PROJECT_ROOT}\Integrate and Classify Normal Distributions.mltbx</param.output>
     <param.products.name>
       <item>MATLAB</item>
@@ -142,6 +142,7 @@ dprime_scaling.gif
       <file>${PROJECT_ROOT}\best_linear_classifier.m</file>
       <file>${PROJECT_ROOT}\boxMTest.m</file>
       <file>${PROJECT_ROOT}\camouflage_edge_data.mat</file>
+      <file>${PROJECT_ROOT}\CITATION.cff</file>
       <file>${PROJECT_ROOT}\classify_normals.m</file>
       <file>${PROJECT_ROOT}\classify_normals_multi.m</file>
       <file>${PROJECT_ROOT}\combine_ray_trace_doms.m</file>
@@ -181,6 +182,7 @@ dprime_scaling.gif
       <file>${PROJECT_ROOT}\standard_quad.m</file>
       <file>${PROJECT_ROOT}\standard_ray_fun.m</file>
       <file>${PROJECT_ROOT}\standard_ray_trace.m</file>
+      <file>${PROJECT_ROOT}\svm_optimization_issues.md</file>
       <file>${PROJECT_ROOT}\target_absent.txt</file>
       <file>${PROJECT_ROOT}\target_present.txt</file>
     </fileset.rootfiles>
@@ -188,19 +190,12 @@ dprime_scaling.gif
     <fileset.depfun.excluded />
     <fileset.package />
     <build-deliverables>
-      <file location="${PROJECT_ROOT}" name="Integrate and Classify Normal Distributions.mltbx" optional="false">F:\OneDrive - The University of Texas at Austin\Geisler Lab\IntClassNorm\Integrate and Classify Normal Distributions.mltbx</file>
+      <file location="${PROJECT_ROOT}" name="Integrate and Classify Normal Distributions.mltbx" optional="false">C:\Users\Abhranil\OneDrive - The University of Texas at Austin\Geisler Lab\IntClassNorm\Integrate and Classify Normal Distributions.mltbx</file>
     </build-deliverables>
     <workflow />
     <matlab>
       <root>C:\Program Files\MATLAB\R2024b</root>
-      <toolboxes>
-        <toolbox name="neuralnetwork" />
-      </toolboxes>
-      <toolbox>
-        <neuralnetwork>
-          <enabled>true</enabled>
-        </neuralnetwork>
-      </toolbox>
+      <toolboxes />
     </matlab>
     <platform>
       <unix>false</unix>
