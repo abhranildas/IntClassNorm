@@ -5,8 +5,10 @@ function results=classify_normals(dist_1,dist_2,varargin)
 % Abhranil Das <abhranil.das@utexas.edu>
 % Center for Perceptual Systems, University of Texas at Austin
 % If you use this code, please cite:
-% <a href="matlab:web('https://arxiv.org/abs/2012.14331')"
-% >A method to integrate and classify normal distributions</a>.
+% 1. <a href="matlab:web('https://doi.org/10.1167/jov.21.10.1','-browser')"
+% >A method to integrate and classify normal distributions</a>
+% 2. <a href="matlab:web('https://arxiv.org/abs/2012.14331','-browser')"
+% >Methods to integrate multinormals and compute classification measures</a>
 %
 % Example:
 % mu_1=[4; 5]; v_1=[2 1; 1 1];
@@ -30,10 +32,10 @@ function results=classify_normals(dist_1,dist_2,varargin)
 %               classifying a sample from i as j.
 % input_type    'norm' for normal parameter inputs (default), 'samp' for
 %               sample inputs.
-% dom           custom (non-optimal) classification domain, in one of three
-%               forms:
-%               • struct containing coefficients a2 (matrix), a1 (column
-%                 vector) and a0 (scalar) of a quadratic domain:
+% dom           custom (non-optimal) classification domain corresponding to the
+%               decision region of class 1, in one of three forms:
+%               • struct containing coefficients q2 (matrix), q1 (column
+%                 vector) and q0 (scalar) of a quadratic domain:
 %                 x'*q2*x + q1'*x + q0 > 0
 %               • handle to a ray-trace function, returning the starting sign
 %                 and roots of the domain along any ray
@@ -103,6 +105,11 @@ function results=classify_normals(dist_1,dist_2,varargin)
 %               possible. For ray-trace domains, only norm_prob is
 %               possible.
 %               false or 0, for no plot.
+% bd_deriv      false by default. If true (and the boundary is quadratic),
+%               also returns the exact gradient and Hessian of the overall
+%               error (or expected value, if custom outcome values are
+%               supplied) with respect to the boundary coefficients q2, q1,
+%               q0, holding the normals fixed.
 %
 % Output: struct containing
 % norm_bd       struct of coefficients of the optimal quadratic boundary
@@ -119,6 +126,25 @@ function results=classify_normals(dist_1,dist_2,varargin)
 %               log10 values, which are negative.
 % norm_err      overall error rate. Value < realmin=1e-308 is
 %               returned as its log10 value, which is negative.
+% norm_err_bd_grad,
+% norm_err_bd_hess  gradient and Hessian of norm_err with respect to the
+%               boundary coefficients q2, q1, q0 (returned only when
+%               bd_deriv=true and the boundary is quadratic).
+%               norm_err_bd_grad is a struct with fields q0 (scalar,
+%               d(norm_err)/dq0), q1 (d-vector, d(norm_err)/dq1) and q2 (d-by-d
+%               matrix, d(norm_err)/dq2), where d is the dimension.
+%               norm_err_bd_hess is a struct of the six second-derivative
+%               blocks q0q0, q0q1, q0q2, q1q1, q1q2 and q2q2, indexed so that,
+%               e.g., q1q2(a,b,c) is d^2(norm_err)/(dq1(a) dq2(b,c)) and
+%               q2q2(a,b,c,e) is d^2(norm_err)/(dq2(a,b) dq2(c,e)).
+%               Because q2 is a symmetric matrix, its derivative is defined so
+%               that a small symmetric change dq2 in q2 changes norm_err by
+%               sum(norm_err_bd_grad.q2.*dq2,'all'). A consequence is that
+%               nudging a single off-diagonal pair q2(a,b) and q2(b,a) together
+%               by e changes norm_err by 2*norm_err_bd_grad.q2(a,b)*e.
+%               At the optimal boundary the gradient is ~0. When custom outcome
+%               values are supplied, the differentiated quantity is norm_val
+%               instead, returned as norm_val_bd_grad and norm_val_bd_hess.
 % bdv           Function handle that accepts a column vector x of
 %               coordinates, and returns the Bayes decision variable, i.e.
 %               the log posterior ratio, at that point. If outcome values
@@ -241,6 +267,7 @@ addParameter(parser,'bd_pts',false);
 addParameter(parser,'n_samp_bd_pts',1e4);
 addParameter(parser,'plotmode','norm_prob',@(s) strcmpi(s,'norm_prob') || strcmpi(s,'fun_prob') || s==false);
 addParameter(parser,'d_con',false,@islogical);
+addParameter(parser,'bd_deriv',false,@islogical);
 
 
 parse(parser,dist_1,dist_2,varargin{:});
@@ -255,6 +282,7 @@ d_scale=parser.Results.d_scale;
 n_samp_bd_pts=parser.Results.n_samp_bd_pts;
 plotmode=parser.Results.plotmode;
 d_con=parser.Results.d_con;
+bd_deriv=parser.Results.bd_deriv;
 
 if strcmpi(parser.Results.input_type,'norm')
     mu_1=dist_1(:,1);
@@ -522,6 +550,33 @@ if ~isequal(vals,eye(2)) % if outcome values are supplied
     results.norm_val=sum(results.norm_valmat(:));
 end
 
+% gradient/Hessian of the error (or expected value) wrt the boundary coeffs.
+% Only for quadratic boundaries that actually exist (skipped for identical
+% distributions, where no boundary is computed). With F_i=P(q(x)<0|N_i) and the
+% toolbox's convention that class 1 is the region q(x)>0, the returned scalar is
+%   norm_err = pi_1*F_1 + pi_2*(1-F_2)     (default), or
+%   norm_val = sum_ij vals(i,j)*errmat(i,j)  (custom outcome values),
+% both of the unified form pi_1*a1*F_1 + pi_2*a2*F_2 + const, where the
+% figure-of-merit matrix M is the misclassification cost 1-eye(2) for the error
+% or vals for the expected value, and a1=M(1,2)-M(1,1), a2=M(2,2)-M(2,1). So the
+% boundary-derivatives are the same linear combination of the two per-normal cdf
+% derivatives from cdf_grad_norm_quad.
+if bd_deriv && strcmpi(dom_type,'quad') && exist('dom','var') && isstruct(dom)
+    [g1,h1]=cdf_grad_norm_quad(0,mu_1,v_1,dom);
+    [g2,h2]=cdf_grad_norm_quad(0,mu_2,v_2,dom);
+    if isequal(vals,eye(2)), M=1-eye(2); else, M=vals; end
+    a1=M(1,2)-M(1,1); a2=M(2,2)-M(2,1);
+    bd_grad=combine_bd(priors(1)*a1,g1,priors(2)*a2,g2);
+    bd_hess=combine_bd(priors(1)*a1,h1,priors(2)*a2,h2);
+    if isequal(vals,eye(2))
+        results.norm_err_bd_grad=bd_grad;
+        results.norm_err_bd_hess=bd_hess;
+    else
+        results.norm_val_bd_grad=bd_grad;
+        results.norm_val_bd_hess=bd_hess;
+    end
+end
+
 %% sample inputs
 if strcmpi(parser.Results.input_type,'samp')
 
@@ -732,6 +787,16 @@ function pts=trim_bd_pts(varargin)
 % Concatenate boundary-point arrays (columns are points) and keep the unique
 % columns.
 pts=uniquetol([varargin{:}]',1e-12,'Byrows',true,'Datascale',1)';
+end
+
+function s=combine_bd(w1,s1,w2,s2)
+% Field-wise weighted sum w1*s1 + w2*s2 of two matching structs (works for both
+% the gradient struct {q2,q1,q0} and the Hessian block struct returned by
+% cdf_grad_norm_quad).
+s=struct();
+for f=fieldnames(s1)'
+    s.(f{1})=w1*s1.(f{1})+w2*s2.(f{1});
+end
 end
 
 function z=norminv_errmat_entry(entry,prior)

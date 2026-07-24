@@ -10,15 +10,28 @@ license: MIT
 repository-code: "https://github.com/abhranildas/IntClassNorm"
 preferred-citation:
   type: article
-  title: "Methods to integrate multinormals and compute classification measures"
+  title: "A method to integrate and classify normal distributions"
   authors:
     - family-names: Das
       given-names: Abhranil
     - family-names: Geisler
       given-names: Wilson S.
-  year: 2020
-  journal: "arXiv"
-  identifiers:
-    - type: other
-      value: "arXiv:2012.14331"
-      description: "arXiv preprint ID"
+  year: 2021
+  journal: "Journal of Vision"
+  volume: 21
+  issue: 10
+  doi: "10.1167/jov.21.10.1"
+references:
+  - type: article
+    title: "Methods to integrate multinormals and compute classification measures"
+    authors:
+      - family-names: Das
+        given-names: Abhranil
+      - family-names: Geisler
+        given-names: Wilson S.
+    year: 2020
+    journal: "arXiv"
+    identifiers:
+      - type: other
+        value: "arXiv:2012.14331"
+        description: "arXiv preprint ID"

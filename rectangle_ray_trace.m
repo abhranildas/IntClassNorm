@@ -13,8 +13,10 @@ function [init_sign,x] = rectangle_ray_trace(rect,n,orig)
 % Center for Perceptual Systems, University of Texas at Austin
 %
 % If you use this code, please cite:
-% <a href="matlab:web('https://arxiv.org/abs/2012.14331')"
-% >A method to integrate and classify normal distributions</a>.
+% 1. <a href="matlab:web('https://doi.org/10.1167/jov.21.10.1','-browser')"
+% >A method to integrate and classify normal distributions</a>
+% 2. <a href="matlab:web('https://arxiv.org/abs/2012.14331','-browser')"
+% >Methods to integrate multinormals and compute classification measures</a>
 %
 % Example:
 % L = [-1 -1]; U = [1 1]; ray = [0 1;1 1]; orig=[0;0];

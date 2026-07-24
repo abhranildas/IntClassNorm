@@ -6,7 +6,9 @@ Abhranil Das, Center for Perceptual Systems, The University of Texas at Austin.
 
 Bugs/comments/questions/suggestions to abhranil.das@utexas.edu.
 
-If you use this code, please cite: [Methods to integrate multinormals and compute classification measures.](https://arxiv.org/abs/2012.14331)
+If you use this code, please cite:
+ - [A method to integrate and classify normal distributions](https://doi.org/10.1167/jov.21.10.1)
+ - [Methods to integrate multinormals and compute classification measures](https://arxiv.org/abs/2012.14331)
 
 ## Installation
 Within Matlab's Home tab, select Add-Ons > Get Add-Ons > Search for 'Integrate and classify normal distributions' and install.

@@ -11,8 +11,10 @@ function [init_sign,x,samp_correct]=line_ray_trace(n,orig)
 % Abhranil Das <abhranil.das@utexas.edu>
 % Center for Perceptual Systems, University of Texas at Austin
 % If you use this code, please cite:
-% <a href="matlab:web('https://arxiv.org/abs/2012.14331')"
-% >A method to integrate and classify normal distributions</a>.
+% 1. <a href="matlab:web('https://doi.org/10.1167/jov.21.10.1','-browser')"
+% >A method to integrate and classify normal distributions</a>
+% 2. <a href="matlab:web('https://arxiv.org/abs/2012.14331','-browser')"
+% >Methods to integrate multinormals and compute classification measures</a>
 %
 % Example:
 % n=[0 1 -1; 2 1 -1]; orig=[0;0];

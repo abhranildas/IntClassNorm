@@ -6,8 +6,10 @@ function [samp_val,samp_val_mat,samp_1_correct,samp_2_correct,samp_1_dv,samp_2_d
 %	Wilson S Geisler
 %	Center for Perceptual Systems, University of Texas at Austin
 % If you use this code, please cite:
-%   A new method to compute classification error
-%   https://jov.arvojournals.org/article.aspx?articleid=2750251
+% 1. <a href="matlab:web('https://doi.org/10.1167/jov.21.10.1','-browser')"
+% >A method to integrate and classify normal distributions</a>
+% 2. <a href="matlab:web('https://arxiv.org/abs/2012.14331','-browser')"
+% >Methods to integrate multinormals and compute classification measures</a>
 
 % parse inputs (manual name-value parse instead of inputParser: this is
 % called once per objective evaluation during boundary optimization, where
